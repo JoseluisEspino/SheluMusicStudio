@@ -44,3 +44,12 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+
+# Project data directories
+music/
+separated/
+separated_audio/
+
+# Logs
+*.log
+logs/

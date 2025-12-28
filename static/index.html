@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SheluMusicStudio - Separador de Audio</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 SheluMusicStudio</h1>
+            <p class="subtitle">Descarga y separa audio de YouTube con IA</p>
+        </header>
+
+        <!-- Navegación -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="search">🔍 Buscar</button>
+            <button class="tab" data-tab="library">📚 Biblioteca</button>
+            <button class="tab" data-tab="tasks">⚙️ Tareas</button>
+        </nav>
+
+        <!-- Tab: Buscar -->
+        <div class="tab-content active" id="search">
+            <div class="search-section">
+                <h2>Buscar Música en YouTube</h2>
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="searchQuery" 
+                        placeholder="Ej: Måneskin - IL DONO DELLA VITA"
+                        autocomplete="off"
+                    >
+                    <button id="searchBtn" class="btn btn-primary">Buscar</button>
+                </div>
+                
+                <div id="searchResults" class="results-container"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Biblioteca -->
+        <div class="tab-content" id="library">
+            <div class="library-section">
+                <h2>Mi Biblioteca</h2>
+                
+                <div class="stats" id="libraryStats"></div>
+                
+                <div class="filter-box">
+                    <select id="artistFilter">
+                        <option value="">Todos los artistas</option>
+                    </select>
+                    <button id="refreshLibrary" class="btn btn-secondary">🔄 Actualizar</button>
+                </div>
+                
+                <div id="songsList" class="songs-list"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Tareas -->
+        <div class="tab-content" id="tasks">
+            <div class="tasks-section">
+                <h2>Tareas en Progreso</h2>
+                <div id="tasksList" class="tasks-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Separación -->
+    <div id="separateModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Separar Audio</h2>
+            
+            <div class="form-group">
+                <label>Archivo:</label>
+                <p id="modalFileName" class="file-name"></p>
+            </div>
+            
+            <div class="form-group">
+                <label for="modelSelect">Modelo de Separación:</label>
+                <select id="modelSelect">
+                    <option value="htdemucs_6s">htdemucs_6s - 6 pistas (vocals, drums, bass, other, guitar, piano)</option>
+                    <option value="htdemucs">htdemucs - 4 pistas (vocals, drums, bass, other)</option>
+                    <option value="htdemucs_ft">htdemucs_ft - 4 pistas (fine-tuned)</option>
+                    <option value="mdx_extra">mdx_extra - Alta calidad</option>
+                </select>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="startSeparation" class="btn btn-primary">Iniciar Separación</button>
+                <button id="cancelSeparation" class="btn btn-secondary">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
