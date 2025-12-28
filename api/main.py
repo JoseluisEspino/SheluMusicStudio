@@ -39,7 +39,7 @@ class SearchRequest(BaseModel):
 class DownloadRequest(BaseModel):
     video_id: str
     title: str
-    artist: Optional[str] = None
+    artist: str
 
 
 class SeparateRequest(BaseModel):
@@ -76,6 +76,10 @@ async def download_music(request: DownloadRequest, background_tasks: BackgroundT
     Descargar audio de YouTube
     """
     try:
+        # Validar que el artista no esté vacío
+        if not request.artist or not request.artist.strip():
+            raise HTTPException(status_code=400, detail="El nombre del artista es obligatorio")
+        
         # Generar ID de tarea
         task_id = f"download_{request.video_id}_{datetime.now().timestamp()}"
         

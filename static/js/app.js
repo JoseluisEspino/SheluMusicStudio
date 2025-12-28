@@ -131,7 +131,14 @@ async function handleDownload(e) {
     const videoId = btn.dataset.videoId;
     const title = btn.dataset.title;
     const artistInput = document.getElementById(`artist-${videoId}`);
-    const artist = artistInput?.value.trim() || null;
+    const artist = artistInput?.value.trim() || '';
+    
+    // Validar que el artista no esté vacío
+    if (!artist) {
+        alert('Por favor, ingresa el nombre del artista antes de descargar.');
+        artistInput?.focus();
+        return;
+    }
     
     btn.disabled = true;
     btn.textContent = 'Descargando...';
@@ -168,6 +175,7 @@ async function handleDownload(e) {
         console.error('Error al descargar:', error);
         btn.textContent = '✗ Error';
         btn.disabled = false;
+        alert(`Error al descargar: ${error.message}`);
     }
 }
 
