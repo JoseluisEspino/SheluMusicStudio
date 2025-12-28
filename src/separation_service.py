@@ -21,7 +21,7 @@ def separate_audio_task(
         task_id: ID de la tarea
         file_path: Ruta del archivo MP3
         model: Modelo de Demucs a usar
-        artist: Nombre del artista (opcional)
+        artist: Nombre del artista (opcional, no usado actualmente)
         tasks_status: Diccionario de estados de tareas
     """
     try:
@@ -29,17 +29,10 @@ def separate_audio_task(
         tasks_status[task_id]["message"] = "Separando audio con Demucs..."
         tasks_status[task_id]["progress"] = 10
         
-        # Ejecutar separación
+        # Ejecutar separación (ahora se guarda automáticamente junto al archivo original)
         output_dir = separate_audio(file_path, model=model, device="cpu")
         
         if output_dir:
-            # Organizar archivos si se especificó artista
-            if artist:
-                tasks_status[task_id]["progress"] = 80
-                tasks_status[task_id]["message"] = "Organizando archivos..."
-                organized_path = organize_separated_files(output_dir, artist)
-                output_dir = organized_path
-            
             # Completar tarea
             tasks_status[task_id]["status"] = "completed"
             tasks_status[task_id]["progress"] = 100
@@ -67,7 +60,7 @@ def separate_audio(
         input_file: Ruta del archivo MP3
         model: Modelo de Demucs (htdemucs_6s, htdemucs, htdemucs_ft, mdx_extra)
         device: Dispositivo (cpu, cuda)
-        output_folder: Carpeta de salida
+        output_folder: Carpeta de salida (temporal, se reorganizará)
         
     Returns:
         Ruta de la carpeta de salida o None si falla
@@ -77,7 +70,9 @@ def separate_audio(
         return None
     
     try:
-        os.makedirs(output_folder, exist_ok=True)
+        # Crear carpeta temporal para Demucs
+        temp_output = os.path.join(output_folder, "_temp")
+        os.makedirs(temp_output, exist_ok=True)
         
         # Comando de Demucs
         cmd = [
@@ -86,7 +81,7 @@ def separate_audio(
             "--mp3-bitrate", "320",
             "-n", model,
             "-d", device,
-            "-o", output_folder,
+            "-o", temp_output,
             input_file
         ]
         
@@ -101,15 +96,32 @@ def separate_audio(
         )
         
         # La estructura de salida de Demucs es:
-        # output_folder/model_name/song_name/stem.mp3
+        # temp_output/model_name/song_name/stem.mp3
         song_name = os.path.splitext(os.path.basename(input_file))[0]
-        output_dir = os.path.join(output_folder, model, song_name)
+        temp_dir = os.path.join(temp_output, model, song_name)
         
-        if os.path.exists(output_dir):
-            print(f"✓ Audio separado en: {output_dir}")
-            return output_dir
+        if os.path.exists(temp_dir):
+            # Crear carpeta de destino junto al archivo original
+            input_dir = os.path.dirname(input_file)
+            final_output_dir = os.path.join(input_dir, song_name)
+            
+            # Si ya existe, eliminarla
+            if os.path.exists(final_output_dir):
+                shutil.rmtree(final_output_dir)
+            
+            # Mover carpeta con las pistas al destino final
+            shutil.move(temp_dir, final_output_dir)
+            
+            # Limpiar carpeta temporal
+            try:
+                shutil.rmtree(temp_output)
+            except:
+                pass
+            
+            print(f"✓ Audio separado en: {final_output_dir}")
+            return final_output_dir
         else:
-            print(f"✗ No se encontró la carpeta de salida: {output_dir}")
+            print(f"✗ No se encontró la carpeta de salida: {temp_dir}")
             return None
             
     except subprocess.CalledProcessError as e:

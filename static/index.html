@@ -16,6 +16,7 @@
         <!-- Navegación -->
         <nav class="tabs">
             <button class="tab active" data-tab="search">🔍 Buscar</button>
+            <button class="tab" data-tab="explorer">📁 Explorador</button>
             <button class="tab" data-tab="library">📚 Biblioteca</button>
             <button class="tab" data-tab="tasks">⚙️ Tareas</button>
         </nav>
@@ -35,6 +36,53 @@
                 </div>
                 
                 <div id="searchResults" class="results-container"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Explorador -->
+        <div class="tab-content" id="explorer">
+            <div class="explorer-section">
+                <h2>Explorador de Música</h2>
+                
+                <div class="explorer-container">
+                    <div class="tree-view" id="musicTree">
+                        <div class="loading">Cargando biblioteca...</div>
+                    </div>
+                    
+                    <div class="player-section">
+                        <div class="player-header">
+                            <h3>Reproductor</h3>
+                            <div class="player-controls-main">
+                                <button id="playSelectedBtn" class="btn btn-primary" disabled>
+                                    ▶️ Reproducir Seleccionadas
+                                </button>
+                                <button id="clearQueueBtn" class="btn btn-secondary">
+                                    🗑️ Limpiar Cola
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="now-playing" id="nowPlaying">
+                            <div class="np-info">
+                                <span class="np-label">Reproduciendo:</span>
+                                <span class="np-title" id="npTitle">Ninguna pista</span>
+                            </div>
+                            <audio id="audioPlayer" controls></audio>
+                        </div>
+                        
+                        <div class="queue-section">
+                            <h4>Cola de Reproducción</h4>
+                            <div class="queue-list" id="queueList">
+                                <p class="empty-queue">La cola está vacía</p>
+                            </div>
+                        </div>
+                        
+                        <div class="selected-tracks">
+                            <h4>Pistas Seleccionadas (<span id="selectedCount">0</span>)</h4>
+                            <div class="selected-list" id="selectedList"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 

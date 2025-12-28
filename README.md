@@ -138,22 +138,26 @@ SheluMusicStudio/
 ```
 music/
 ├── Måneskin/
-│   └── IL DONO DELLA VITA.mp3
-└── AC_DC/
-    └── Thunderstruck.mp3
-
-separated/
-├── Måneskin/
-│   └── IL DONO DELLA VITA/
+│   ├── IL DONO DELLA VITA.mp3
+│   └── IL DONO DELLA VITA/          ← Carpeta con 6 pistas
 │       ├── vocals.mp3
 │       ├── drums.mp3
 │       ├── bass.mp3
 │       ├── other.mp3
 │       ├── guitar.mp3
 │       └── piano.mp3
-└── AC_DC/
-    └── ...
+└── Radiohead/
+    ├── High and Dry.mp3
+    └── High and Dry/                ← Carpeta con 6 pistas
+        ├── vocals.mp3
+        ├── drums.mp3
+        ├── bass.mp3
+        ├── other.mp3
+        ├── guitar.mp3
+        └── piano.mp3
 ```
+
+**Las pistas separadas se guardan en una carpeta con el mismo nombre del archivo MP3, ubicada en el mismo directorio.**
 
 ## 🛠️ Solución de Problemas
 

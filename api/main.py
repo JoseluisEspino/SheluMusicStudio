@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from src.youtube_service import search_youtube, download_audio
 from src.separation_service import separate_audio_task, get_separation_status
-from src.file_manager import organize_by_artist, list_songs, get_separated_files
+from src.file_manager import organize_by_artist, list_songs, get_separated_files, get_music_tree, get_library_stats
 
 app = FastAPI(
     title="SheluMusicStudio API",
@@ -201,6 +201,30 @@ async def get_artists():
                   if os.path.isdir(os.path.join(music_dir, d))]
         
         return {"success": True, "artists": sorted(artists)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/music-tree")
+async def get_tree():
+    """
+    Obtener estructura de árbol de la biblioteca
+    """
+    try:
+        tree = get_music_tree()
+        return {"success": True, "tree": tree}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """
+    Obtener estadísticas de la biblioteca
+    """
+    try:
+        stats = get_library_stats()
+        return {"success": True, "stats": stats}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

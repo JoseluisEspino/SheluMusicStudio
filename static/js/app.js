@@ -4,6 +4,11 @@ const API_URL = 'http://localhost:8000/api';
 // Estado global
 let currentTasks = {};
 let currentSongForSeparation = null;
+let musicTree = null;
+let selectedTracks = [];
+let playQueue = [];
+let currentTrackIndex = 0;
+let audioPlayer = null;
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
@@ -11,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearch();
     initLibrary();
     initModal();
+    initExplorer();
     startTaskPolling();
 });
 
@@ -38,6 +44,8 @@ function initTabs() {
                         loadLibrary();
                     } else if (tabName === 'tasks') {
                         renderTasks();
+                    } else if (tabName === 'explorer') {
+                        loadMusicTree();
                     }
                 }
             });
@@ -437,4 +445,272 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// === EXPLORADOR Y REPRODUCTOR ===
+function initExplorer() {
+    audioPlayer = document.getElementById('audioPlayer');
+    
+    // Event listeners para controles
+    document.getElementById('playSelectedBtn').addEventListener('click', playSelected);
+    document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+    
+    // Audio player events
+    audioPlayer.addEventListener('ended', playNext);
+    audioPlayer.addEventListener('error', (e) => {
+        console.error('Error de audio:', e);
+        playNext();
+    });
+}
+
+async function loadMusicTree() {
+    const container = document.getElementById('musicTree');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando biblioteca...</p></div>';
+    
+    try {
+        const response = await fetch(`${API_URL}/music-tree`);
+        const data = await response.json();
+        
+        if (data.success && data.tree.artists.length > 0) {
+            musicTree = data.tree;
+            renderMusicTree(data.tree);
+        } else {
+            container.innerHTML = '<p class="loading">No hay música en la biblioteca</p>';
+        }
+    } catch (error) {
+        console.error('Error al cargar árbol:', error);
+        container.innerHTML = '<p class="loading" style="color: var(--error-color);">Error al cargar biblioteca</p>';
+    }
+}
+
+function renderMusicTree(tree) {
+    const container = document.getElementById('musicTree');
+    
+    const html = tree.artists.map(artist => `
+        <div class="tree-artist">
+            <div class="tree-artist-header" onclick="toggleArtist('${escapeHtml(artist.name)}')">
+                <span class="tree-icon">▶</span>
+                <span class="tree-artist-name">👤 ${escapeHtml(artist.name)}</span>
+                <span style="margin-left: auto; color: var(--text-muted); font-size: 0.9rem;">
+                    ${artist.songs.length} canción${artist.songs.length !== 1 ? 'es' : ''}
+                </span>
+            </div>
+            <div class="tree-songs" id="artist-${artist.name.replace(/[^a-zA-Z0-9]/g, '_')}">
+                ${artist.songs.map(song => renderSong(artist.name, song)).join('')}
+            </div>
+        </div>
+    `).join('');
+    
+    container.innerHTML = html;
+}
+
+function renderSong(artistName, song) {
+    const songId = `${artistName}-${song.name}`.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    if (!song.has_stems) {
+        return `
+            <div class="tree-song">
+                <div class="tree-song-header">
+                    <span class="tree-song-name">🎵 ${escapeHtml(song.name)}</span>
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">Sin pistas</span>
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="tree-song">
+            <div class="tree-song-header" onclick="toggleSong('${songId}')">
+                <div>
+                    <span class="tree-icon">▶</span>
+                    <span class="tree-song-name">🎵 ${escapeHtml(song.name)}</span>
+                </div>
+                <span class="tree-song-badge">${song.stems.length} pistas</span>
+            </div>
+            <div class="tree-stems" id="song-${songId}">
+                ${song.stems.map(stem => renderStem(artistName, song.name, stem)).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderStem(artistName, songName, stem) {
+    const stemIcons = {
+        'vocals': '🎤',
+        'drums': '🥁',
+        'bass': '🎸',
+        'guitar': '🎸',
+        'piano': '🎹',
+        'other': '🎼'
+    };
+    
+    const icon = stemIcons[stem.name] || '🎵';
+    const size = (stem.size / (1024 * 1024)).toFixed(2);
+    const trackId = `${artistName}-${songName}-${stem.name}`.replace(/[^a-zA-Z0-9]/g, '_');
+    
+    return `
+        <div class="tree-stem">
+            <div class="tree-stem-info">
+                <input type="checkbox" class="stem-checkbox" id="check-${trackId}"
+                       onchange="toggleTrackSelection('${trackId}', '${escapeHtml(artistName)}', '${escapeHtml(songName)}', '${escapeHtml(stem.name)}', '${stem.file_path}')">
+                <span class="stem-icon">${icon}</span>
+                <span class="stem-name">${escapeHtml(stem.name)}</span>
+            </div>
+            <span class="stem-size">${size} MB</span>
+        </div>
+    `;
+}
+
+function toggleArtist(artistName) {
+    const id = `artist-${artistName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const element = document.getElementById(id);
+    const header = element.previousElementSibling;
+    
+    element.classList.toggle('show');
+    header.classList.toggle('expanded');
+}
+
+function toggleSong(songId) {
+    const element = document.getElementById(`song-${songId}`);
+    const header = element.previousElementSibling;
+    
+    element.classList.toggle('show');
+    header.querySelector('.tree-icon').style.transform = 
+        element.classList.contains('show') ? 'rotate(90deg)' : '';
+}
+
+function toggleTrackSelection(trackId, artist, song, stem, filePath) {
+    const checkbox = document.getElementById(`check-${trackId}`);
+    
+    if (checkbox.checked) {
+        selectedTracks.push({
+            id: trackId,
+            artist,
+            song,
+            stem,
+            filePath,
+            displayName: `${artist} - ${song} [${stem}]`
+        });
+    } else {
+        selectedTracks = selectedTracks.filter(t => t.id !== trackId);
+    }
+    
+    updateSelectedList();
+}
+
+function updateSelectedList() {
+    const container = document.getElementById('selectedList');
+    const count = document.getElementById('selectedCount');
+    const playBtn = document.getElementById('playSelectedBtn');
+    
+    count.textContent = selectedTracks.length;
+    playBtn.disabled = selectedTracks.length === 0;
+    
+    if (selectedTracks.length === 0) {
+        container.innerHTML = '<p class="empty-queue">No hay pistas seleccionadas</p>';
+        return;
+    }
+    
+    container.innerHTML = selectedTracks.map(track => `
+        <div class="selected-item">
+            <span class="selected-item-name">${escapeHtml(track.displayName)}</span>
+            <button class="selected-item-remove" onclick="removeFromSelected('${track.id}')">✕</button>
+        </div>
+    `).join('');
+}
+
+function removeFromSelected(trackId) {
+    const checkbox = document.getElementById(`check-${trackId}`);
+    if (checkbox) checkbox.checked = false;
+    
+    selectedTracks = selectedTracks.filter(t => t.id !== trackId);
+    updateSelectedList();
+}
+
+function playSelected() {
+    if (selectedTracks.length === 0) return;
+    
+    playQueue = [...selectedTracks];
+    currentTrackIndex = 0;
+    
+    updateQueueList();
+    playTrack(0);
+}
+
+function clearQueue() {
+    playQueue = [];
+    currentTrackIndex = 0;
+    audioPlayer.pause();
+    audioPlayer.src = '';
+    
+    document.getElementById('npTitle').textContent = 'Ninguna pista';
+    updateQueueList();
+}
+
+function updateQueueList() {
+    const container = document.getElementById('queueList');
+    
+    if (playQueue.length === 0) {
+        container.innerHTML = '<p class="empty-queue">La cola está vacía</p>';
+        return;
+    }
+    
+    container.innerHTML = playQueue.map((track, index) => `
+        <div class="queue-item ${index === currentTrackIndex ? 'playing' : ''}" 
+             onclick="playTrack(${index})">
+            <span class="queue-item-name">
+                ${index === currentTrackIndex ? '▶️ ' : ''}
+                ${escapeHtml(track.displayName)}
+            </span>
+            <button class="queue-item-remove" onclick="removeFromQueue(${index}, event)">✕</button>
+        </div>
+    `).join('');
+}
+
+function removeFromQueue(index, event) {
+    if (event) event.stopPropagation();
+    
+    playQueue.splice(index, 1);
+    
+    if (index < currentTrackIndex) {
+        currentTrackIndex--;
+    } else if (index === currentTrackIndex) {
+        if (playQueue.length > 0) {
+            playTrack(currentTrackIndex >= playQueue.length ? 0 : currentTrackIndex);
+        } else {
+            clearQueue();
+        }
+        return;
+    }
+    
+    updateQueueList();
+}
+
+function playTrack(index) {
+    if (index < 0 || index >= playQueue.length) return;
+    
+    currentTrackIndex = index;
+    const track = playQueue[index];
+    
+    // Actualizar UI
+    document.getElementById('npTitle').textContent = track.displayName;
+    updateQueueList();
+    
+    // Cargar y reproducir audio
+    audioPlayer.src = `/${track.filePath}`;
+    audioPlayer.play().catch(error => {
+        console.error('Error al reproducir:', error);
+        alert('No se pudo reproducir la pista. Verifica que el archivo exista.');
+    });
+}
+
+function playNext() {
+    if (currentTrackIndex < playQueue.length - 1) {
+        playTrack(currentTrackIndex + 1);
+    } else {
+        // Fin de la cola
+        document.getElementById('npTitle').textContent = 'Cola completada';
+        currentTrackIndex = 0;
+        updateQueueList();
+    }
 }

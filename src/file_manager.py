@@ -127,38 +127,100 @@ def get_library_stats() -> Dict:
         Diccionario con estadísticas
     """
     music_dir = "music"
-    separated_dir = "separated"
     
     stats = {
         'total_songs': 0,
         'total_artists': 0,
         'total_separated': 0,
+        'total_stems': 0,
         'total_size_mb': 0
     }
     
     # Contar canciones y artistas
     if os.path.exists(music_dir):
         artists = set()
-        for root, dirs, files in os.walk(music_dir):
-            for file in files:
-                if file.endswith('.mp3'):
-                    stats['total_songs'] += 1
-                    file_path = os.path.join(root, file)
-                    stats['total_size_mb'] += os.path.getsize(file_path) / (1024 * 1024)
-                    
-                    # Obtener artista
-                    rel_path = os.path.relpath(root, music_dir)
-                    if rel_path != '.':
-                        artists.add(rel_path)
+        for artist_folder in os.listdir(music_dir):
+            artist_path = os.path.join(music_dir, artist_folder)
+            if os.path.isdir(artist_path):
+                artists.add(artist_folder)
+                for item in os.listdir(artist_path):
+                    item_path = os.path.join(artist_path, item)
+                    if item.endswith('.mp3') and os.path.isfile(item_path):
+                        stats['total_songs'] += 1
+                        stats['total_size_mb'] += os.path.getsize(item_path) / (1024 * 1024)
+                        
+                        # Verificar si tiene stems
+                        song_name = os.path.splitext(item)[0]
+                        stems_folder = os.path.join(artist_path, song_name)
+                        if os.path.isdir(stems_folder):
+                            stats['total_separated'] += 1
+                            stem_files = [f for f in os.listdir(stems_folder) if f.endswith('.mp3') or f.endswith('.wav')]
+                            stats['total_stems'] += len(stem_files)
         
         stats['total_artists'] = len(artists)
-    
-    # Contar separaciones
-    if os.path.exists(separated_dir):
-        for root, dirs, files in os.walk(separated_dir):
-            if any(f.endswith('.mp3') for f in files):
-                stats['total_separated'] += 1
     
     stats['total_size_mb'] = round(stats['total_size_mb'], 2)
     
     return stats
+
+
+def get_music_tree() -> Dict:
+    """
+    Obtener estructura de árbol de la biblioteca
+    
+    Returns:
+        Diccionario con estructura de árbol
+    """
+    music_dir = "music"
+    tree = []
+    
+    if not os.path.exists(music_dir):
+        return {'artists': []}
+    
+    # Recorrer carpetas de artistas
+    for artist_folder in sorted(os.listdir(music_dir)):
+        artist_path = os.path.join(music_dir, artist_folder)
+        
+        if not os.path.isdir(artist_path):
+            continue
+        
+        artist_data = {
+            'name': artist_folder,
+            'songs': []
+        }
+        
+        # Recorrer contenido del artista
+        for item in sorted(os.listdir(artist_path)):
+            item_path = os.path.join(artist_path, item)
+            
+            # Si es un archivo MP3, es una canción
+            if item.endswith('.mp3'):
+                song_name = os.path.splitext(item)[0]
+                stems_folder = os.path.join(artist_path, song_name)
+                has_stems = os.path.isdir(stems_folder)
+                
+                song_data = {
+                    'name': song_name,
+                    'file_path': item_path.replace('\\', '/'),
+                    'has_stems': has_stems,
+                    'stems': []
+                }
+                
+                # Si tiene stems, listarlos
+                if has_stems:
+                    for stem_file in sorted(os.listdir(stems_folder)):
+                        if stem_file.endswith('.mp3') or stem_file.endswith('.wav'):
+                            stem_path = os.path.join(stems_folder, stem_file)
+                            stem_name = os.path.splitext(stem_file)[0]
+                            song_data['stems'].append({
+                                'name': stem_name,
+                                'file_path': stem_path.replace('\\', '/'),
+                                'size': os.path.getsize(stem_path)
+                            })
+                
+                artist_data['songs'].append(song_data)
+        
+        if artist_data['songs']:
+            tree.append(artist_data)
+    
+    return {'artists': tree}

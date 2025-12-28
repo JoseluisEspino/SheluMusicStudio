@@ -15,10 +15,12 @@ def separate_audio(
 ):
     """
     Separa un archivo de audio en múltiples pistas usando Demucs.
+    Las pistas se guardan en una carpeta con el mismo nombre del archivo,
+    ubicada en el mismo directorio del archivo original.
     
     Args:
         input_file (str): Ruta del archivo de audio a separar
-        output_folder (str): Carpeta donde guardar los resultados
+        output_folder (str): Carpeta temporal (se reorganizará)
         model (str): Modelo de Demucs a usar
             - 'htdemucs_6s': Por defecto, 6 stems (drums, bass, vocals, other, guitar, piano)
             - 'htdemucs': Alta calidad (4 stems: drums, bass, vocals, other)
@@ -28,14 +30,17 @@ def separate_audio(
         device (str): 'cpu' o 'cuda' para usar GPU
         
     Returns:
-        bool: True si tuvo éxito, False si hubo error
+        str: Ruta de la carpeta con las pistas, o None si hubo error
     """
+    import shutil
+    
     if not os.path.exists(input_file):
         print(f"❌ Error: No se encontró el archivo {input_file}")
-        return False
+        return None
     
-    # Crear carpeta de salida
-    os.makedirs(output_folder, exist_ok=True)
+    # Crear carpeta temporal
+    temp_output = os.path.join(output_folder, "_temp")
+    os.makedirs(temp_output, exist_ok=True)
     
     print(f"🎵 Separando: {os.path.basename(input_file)}")
     print(f"Modelo: {model}")
@@ -47,7 +52,7 @@ def separate_audio(
     cmd = [
         "demucs",
         "-n", model,
-        "-o", output_folder,
+        "-o", temp_output,
         "--device", device,
         input_file
     ]
@@ -56,27 +61,50 @@ def separate_audio(
         # Ejecutar demucs
         result = subprocess.run(cmd, check=True)
         
-        print("\n✅ Separación completada!")
-        print(f"Los archivos separados se guardaron en: {output_folder}/{model}/")
+        # Obtener nombre del archivo sin extensión
+        song_name = os.path.splitext(os.path.basename(input_file))[0]
+        temp_dir = os.path.join(temp_output, model, song_name)
         
-        # Mostrar las pistas generadas
-        track_name = os.path.splitext(os.path.basename(input_file))[0]
-        output_path = os.path.join(output_folder, model, track_name)
-        
-        if os.path.exists(output_path):
-            print("\n📁 Pistas generadas:")
-            for file in os.listdir(output_path):
-                print(f"  - {file}")
-        
-        return True
+        if os.path.exists(temp_dir):
+            # Crear carpeta de destino junto al archivo original
+            input_dir = os.path.dirname(input_file)
+            final_output_dir = os.path.join(input_dir, song_name)
+            
+            # Si ya existe, eliminarla
+            if os.path.exists(final_output_dir):
+                shutil.rmtree(final_output_dir)
+            
+            # Mover carpeta con las pistas al destino final
+            shutil.move(temp_dir, final_output_dir)
+            
+            # Limpiar carpeta temporal
+            try:
+                shutil.rmtree(temp_output)
+            except:
+                pass
+            
+            print("\n✅ Separación completada!")
+            print(f"📁 Las pistas se guardaron en: {final_output_dir}\n")
+            
+            # Mostrar las pistas generadas
+            if os.path.exists(final_output_dir):
+                print("📀 Pistas generadas:")
+                for file in sorted(os.listdir(final_output_dir)):
+                    if file.endswith('.wav') or file.endswith('.mp3'):
+                        print(f"  ✓ {file}")
+            
+            return final_output_dir
+        else:
+            print(f"\n❌ Error: No se encontró la carpeta de salida temporal")
+            return None
         
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Error durante la separación: {e}")
-        return False
+        return None
     except FileNotFoundError:
         print("\n❌ Error: Demucs no está instalado o no se encuentra en el PATH")
         print("Asegúrate de haber activado el entorno virtual e instalado las dependencias")
-        return False
+        return None
 
 
 def separate_all_in_folder(input_folder="music", **kwargs):
