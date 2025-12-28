@@ -25,6 +25,9 @@ def separate_audio_task(
         tasks_status: Diccionario de estados de tareas
     """
     try:
+        print(f"[{task_id}] Iniciando separación de: {file_path}")
+        print(f"[{task_id}] Modelo: {model}")
+        
         # Actualizar estado
         tasks_status[task_id]["message"] = "Separando audio con Demucs..."
         tasks_status[task_id]["progress"] = 10
@@ -33,16 +36,19 @@ def separate_audio_task(
         output_dir = separate_audio(file_path, model=model, device="cpu")
         
         if output_dir:
+            print(f"[{task_id}] Separación exitosa en: {output_dir}")
             # Completar tarea
             tasks_status[task_id]["status"] = "completed"
             tasks_status[task_id]["progress"] = 100
             tasks_status[task_id]["message"] = "Separación completada"
             tasks_status[task_id]["output_dir"] = output_dir
         else:
+            print(f"[{task_id}] Error: No se obtuvo directorio de salida")
             tasks_status[task_id]["status"] = "error"
             tasks_status[task_id]["message"] = "Error al separar el audio"
             
     except Exception as e:
+        print(f"[{task_id}] Excepción: {str(e)}")
         tasks_status[task_id]["status"] = "error"
         tasks_status[task_id]["message"] = f"Error: {str(e)}"
 

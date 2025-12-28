@@ -747,19 +747,28 @@ async function separateSong(artistName, songName, songPath) {
     btn.innerHTML = '⏳ Separando...';
     
     try {
+        console.log('Separando canción:', songPath);
+        
         const response = await fetch(`${API_URL}/separate`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                file_path: songPath
+                file_path: songPath,
+                model: 'htdemucs_6s'
             })
         });
         
-        const data = await response.json();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Error en la respuesta del servidor');
+        }
         
-        if (data.task_id) {
+        const data = await response.json();
+        console.log('Respuesta del servidor:', data);
+        
+        if (data.success && data.task_id) {
             // Monitorear progreso
             const taskId = data.task_id;
             btn.innerHTML = '⏳ 0%';
@@ -768,6 +777,8 @@ async function separateSong(artistName, songName, songPath) {
                 try {
                     const progressResponse = await fetch(`${API_URL}/task/${taskId}`);
                     const progressData = await progressResponse.json();
+                    
+                    console.log('Progreso:', progressData);
                     
                     if (progressData.status === 'completed') {
                         clearInterval(checkProgress);
@@ -782,7 +793,7 @@ async function separateSong(artistName, songName, songPath) {
                         clearInterval(checkProgress);
                         btn.disabled = false;
                         btn.innerHTML = originalText;
-                        alert(`Error al separar: ${progressData.error}`);
+                        alert(`Error al separar: ${progressData.message || progressData.error || 'Error desconocido'}`);
                         
                     } else if (progressData.progress !== undefined) {
                         btn.innerHTML = `⏳ ${Math.round(progressData.progress)}%`;
@@ -793,7 +804,7 @@ async function separateSong(artistName, songName, songPath) {
             }, 1000);
             
         } else {
-            throw new Error(data.message || 'Error desconocido');
+            throw new Error(data.message || 'No se recibió task_id del servidor');
         }
         
     } catch (error) {
