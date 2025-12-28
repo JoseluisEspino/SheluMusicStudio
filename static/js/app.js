@@ -8,7 +8,7 @@ let musicTree = null;
 let selectedTracks = [];
 let playQueue = [];
 let currentTrackIndex = 0;
-let audioPlayer = null;
+let audioPlayers = []; // Array de reproductores para múltiples pistas
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
@@ -457,20 +457,11 @@ function escapeHtml(text) {
 
 // === EXPLORADOR Y REPRODUCTOR ===
 function initExplorer() {
-    audioPlayer = document.getElementById('audioPlayer');
-    
     // Event listeners para controles
     document.getElementById('playSelectedBtn').addEventListener('click', playSelected);
     document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
     document.getElementById('refreshExplorerBtn').addEventListener('click', () => {
         loadMusicTree();
-    });
-    
-    // Audio player events
-    audioPlayer.addEventListener('ended', playNext);
-    audioPlayer.addEventListener('error', (e) => {
-        console.error('Error de audio:', e);
-        playNext();
     });
 }
 
@@ -658,21 +649,49 @@ function removeFromSelected(trackId) {
 function playSelected() {
     if (selectedTracks.length === 0) return;
     
-    playQueue = [...selectedTracks];
-    currentTrackIndex = 0;
+    // Detener reproducción anterior
+    stopAllAudio();
     
+    playQueue = [...selectedTracks];
     updateQueueList();
-    playTrack(0);
+    
+    // Crear un reproductor para cada pista
+    audioPlayers = playQueue.map((track, index) => {
+        const audio = new Audio(`/${track.filePath}`);
+        audio.volume = 1.0;
+        
+        audio.addEventListener('error', (e) => {
+            console.error(`Error al cargar ${track.displayName}:`, e);
+        });
+        
+        return audio;
+    });
+    
+    // Reproducir todas las pistas simultáneamente
+    document.getElementById('npTitle').textContent = `${playQueue.length} pistas reproduciéndose`;
+    
+    audioPlayers.forEach(audio => {
+        audio.play().catch(error => {
+            console.error('Error al reproducir:', error);
+        });
+    });
 }
 
 function clearQueue() {
+    stopAllAudio();
     playQueue = [];
-    currentTrackIndex = 0;
-    audioPlayer.pause();
-    audioPlayer.src = '';
+    audioPlayers = [];
     
     document.getElementById('npTitle').textContent = 'Ninguna pista';
     updateQueueList();
+}
+
+function stopAllAudio() {
+    audioPlayers.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
+    audioPlayers = [];
 }
 
 function updateQueueList() {
@@ -684,10 +703,8 @@ function updateQueueList() {
     }
     
     container.innerHTML = playQueue.map((track, index) => `
-        <div class="queue-item ${index === currentTrackIndex ? 'playing' : ''}" 
-             onclick="playTrack(${index})">
+        <div class="queue-item">
             <span class="queue-item-name">
-                ${index === currentTrackIndex ? '▶️ ' : ''}
                 ${escapeHtml(track.displayName)}
             </span>
             <button class="queue-item-remove" onclick="removeFromQueue(${index}, event)">✕</button>
@@ -698,50 +715,24 @@ function updateQueueList() {
 function removeFromQueue(index, event) {
     if (event) event.stopPropagation();
     
-    playQueue.splice(index, 1);
+    // Detener y eliminar el reproductor específico
+    if (audioPlayers[index]) {
+        audioPlayers[index].pause();
+        audioPlayers[index].currentTime = 0;
+    }
     
-    if (index < currentTrackIndex) {
-        currentTrackIndex--;
-    } else if (index === currentTrackIndex) {
-        if (playQueue.length > 0) {
-            playTrack(currentTrackIndex >= playQueue.length ? 0 : currentTrackIndex);
-        } else {
-            clearQueue();
-        }
+    playQueue.splice(index, 1);
+    audioPlayers.splice(index, 1);
+    
+    if (playQueue.length === 0) {
+        clearQueue();
         return;
     }
     
     updateQueueList();
+    document.getElementById('npTitle').textContent = `${playQueue.length} pistas reproduciéndose`;
 }
 
-function playTrack(index) {
-    if (index < 0 || index >= playQueue.length) return;
-    
-    currentTrackIndex = index;
-    const track = playQueue[index];
-    
-    // Actualizar UI
-    document.getElementById('npTitle').textContent = track.displayName;
-    updateQueueList();
-    
-    // Cargar y reproducir audio
-    audioPlayer.src = `/${track.filePath}`;
-    audioPlayer.play().catch(error => {
-        console.error('Error al reproducir:', error);
-        alert('No se pudo reproducir la pista. Verifica que el archivo exista.');
-    });
-}
-
-function playNext() {
-    if (currentTrackIndex < playQueue.length - 1) {
-        playTrack(currentTrackIndex + 1);
-    } else {
-        // Fin de la cola
-        document.getElementById('npTitle').textContent = 'Cola completada';
-        currentTrackIndex = 0;
-        updateQueueList();
-    }
-}
 // === SEPARACIÓN DESDE EXPLORADOR ===
 async function separateSong(artistName, songName, songPath, btn) {
     const originalText = btn.innerHTML;
