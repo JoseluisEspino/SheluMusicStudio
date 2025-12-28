@@ -532,6 +532,33 @@ header h1 {
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
+.explorer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.explorer-header h2 {
+    margin: 0;
+}
+
+#refreshExplorerBtn {
+    padding: 10px 20px;
+    font-size: 14px;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#refreshExplorerBtn:hover {
+    background: #555;
+    transform: translateY(-2px);
+}
+
 .explorer-container {
     display: flex;
     gap: 20px;
@@ -608,6 +635,13 @@ header h1 {
     cursor: pointer;
 }
 
+.tree-song-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
 .tree-song-name {
     font-weight: 500;
 }
@@ -618,6 +652,33 @@ header h1 {
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 0.8rem;
+}
+
+.tree-song-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-separate {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.btn-separate:hover {
+    background: #e64a19;
+    transform: translateY(-1px);
+}
+
+.btn-separate:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .tree-stems {

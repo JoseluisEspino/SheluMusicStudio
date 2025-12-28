@@ -454,6 +454,9 @@ function initExplorer() {
     // Event listeners para controles
     document.getElementById('playSelectedBtn').addEventListener('click', playSelected);
     document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
+    document.getElementById('refreshExplorerBtn').addEventListener('click', () => {
+        loadMusicTree();
+    });
     
     // Audio player events
     audioPlayer.addEventListener('ended', playNext);
@@ -511,8 +514,15 @@ function renderSong(artistName, song) {
         return `
             <div class="tree-song">
                 <div class="tree-song-header">
-                    <span class="tree-song-name">🎵 ${escapeHtml(song.name)}</span>
-                    <span style="color: var(--text-muted); font-size: 0.8rem;">Sin pistas</span>
+                    <div class="tree-song-info">
+                        <span class="tree-song-name">🎵 ${escapeHtml(song.name)}</span>
+                        <span style="color: var(--text-muted); font-size: 0.8rem;">Sin pistas</span>
+                    </div>
+                    <div class="tree-song-actions">
+                        <button class="btn-separate" onclick="separateSong('${escapeHtml(artistName)}', '${escapeHtml(song.name)}', '${escapeHtml(song.file_path)}')">
+                            🎸 Separar
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -521,11 +531,11 @@ function renderSong(artistName, song) {
     return `
         <div class="tree-song">
             <div class="tree-song-header" onclick="toggleSong('${songId}')">
-                <div>
+                <div class="tree-song-info">
                     <span class="tree-icon">▶</span>
                     <span class="tree-song-name">🎵 ${escapeHtml(song.name)}</span>
+                    <span class="tree-song-badge">${song.stems.length} pistas</span>
                 </div>
-                <span class="tree-song-badge">${song.stems.length} pistas</span>
             </div>
             <div class="tree-stems" id="song-${songId}">
                 ${song.stems.map(stem => renderStem(artistName, song.name, stem)).join('')}
@@ -712,5 +722,76 @@ function playNext() {
         document.getElementById('npTitle').textContent = 'Cola completada';
         currentTrackIndex = 0;
         updateQueueList();
+    }
+}
+// === SEPARACIÓN DESDE EXPLORADOR ===
+async function separateSong(artistName, songName, songPath) {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    // Confirmar acción
+    if (!confirm(`¿Deseas separar "${songName}" en pistas individuales?\n\nEsto creará una carpeta "${songName}" con 6 pistas (vocals, drums, bass, guitar, piano, other).`)) {
+        return;
+    }
+    
+    // Deshabilitar botón
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Separando...';
+    
+    try {
+        const response = await fetch(`${API_URL}/separate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                file_path: songPath
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.task_id) {
+            // Monitorear progreso
+            const taskId = data.task_id;
+            btn.innerHTML = '⏳ 0%';
+            
+            const checkProgress = setInterval(async () => {
+                try {
+                    const progressResponse = await fetch(`${API_URL}/task/${taskId}`);
+                    const progressData = await progressResponse.json();
+                    
+                    if (progressData.status === 'completed') {
+                        clearInterval(checkProgress);
+                        btn.innerHTML = '✅ Completado';
+                        
+                        // Actualizar árbol después de 2 segundos
+                        setTimeout(() => {
+                            loadMusicTree();
+                        }, 2000);
+                        
+                    } else if (progressData.status === 'error') {
+                        clearInterval(checkProgress);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                        alert(`Error al separar: ${progressData.error}`);
+                        
+                    } else if (progressData.progress !== undefined) {
+                        btn.innerHTML = `⏳ ${Math.round(progressData.progress)}%`;
+                    }
+                } catch (error) {
+                    console.error('Error al verificar progreso:', error);
+                }
+            }, 1000);
+            
+        } else {
+            throw new Error(data.message || 'Error desconocido');
+        }
+        
+    } catch (error) {
+        console.error('Error al separar:', error);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        alert(`Error al iniciar separación: ${error.message}`);
     }
 }
