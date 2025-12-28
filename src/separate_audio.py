@@ -11,7 +11,7 @@ def separate_audio(
     output_folder="separated",
     model="htdemucs_6s",
     stems=6,
-    device="cpu"
+    device="cuda"
 ):
     """
     Separa un archivo de audio en múltiples pistas usando Demucs.

@@ -64,7 +64,7 @@ def main():
         success = separate_audio(
             input_file=audio_file,
             model=modelo,
-            device="cpu"
+            device="cuda"
         )
         
         if success:

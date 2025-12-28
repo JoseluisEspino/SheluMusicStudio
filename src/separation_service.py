@@ -33,7 +33,7 @@ def separate_audio_task(
         tasks_status[task_id]["progress"] = 10
         
         # Ejecutar separación (ahora se guarda automáticamente junto al archivo original)
-        output_dir = separate_audio(file_path, model=model, device="cpu")
+        output_dir = separate_audio(file_path, model=model, device="cuda")
         
         if output_dir:
             print(f"[{task_id}] Separación exitosa en: {output_dir}")

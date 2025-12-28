@@ -513,6 +513,16 @@ function renderMusicTree(tree) {
     `).join('');
     
     container.innerHTML = html;
+    
+    // Añadir event listeners a los botones de separar
+    document.querySelectorAll('.btn-separate').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const artistName = this.dataset.artist;
+            const songName = this.dataset.song;
+            const songPath = this.dataset.path;
+            separateSong(artistName, songName, songPath, this);
+        });
+    });
 }
 
 function renderSong(artistName, song) {
@@ -527,7 +537,7 @@ function renderSong(artistName, song) {
                         <span style="color: var(--text-muted); font-size: 0.8rem;">Sin pistas</span>
                     </div>
                     <div class="tree-song-actions">
-                        <button class="btn-separate" onclick="separateSong('${escapeHtml(artistName)}', '${escapeHtml(song.name)}', '${escapeHtml(song.file_path)}')">
+                        <button class="btn-separate" data-artist="${escapeHtml(artistName)}" data-song="${escapeHtml(song.name)}" data-path="${escapeHtml(song.file_path)}">
                             🎸 Separar
                         </button>
                     </div>
@@ -733,8 +743,7 @@ function playNext() {
     }
 }
 // === SEPARACIÓN DESDE EXPLORADOR ===
-async function separateSong(artistName, songName, songPath) {
-    const btn = event.target;
+async function separateSong(artistName, songName, songPath, btn) {
     const originalText = btn.innerHTML;
     
     // Confirmar acción
