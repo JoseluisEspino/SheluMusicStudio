@@ -1,5 +1,5 @@
 """
-SheluMusicStudio - Proyecto de Descarga y Separación de Audio
+Shelu Music Studio - Proyecto de Descarga y Separación de Audio
 
 Este proyecto permite:
 1. Buscar y descargar audio de YouTube en formato MP3

@@ -1,5 +1,5 @@
-# Script de inicio para SheluMusicStudio
-Write-Host "🎵 Iniciando SheluMusicStudio..." -ForegroundColor Cyan
+# Script de inicio para Shelu Music Studio
+Write-Host "🎵 Iniciando Shelu Music Studio..." -ForegroundColor Cyan
 
 # Verificar entorno virtual
 if (!(Test-Path ".\venv\Scripts\Activate.ps1")) {

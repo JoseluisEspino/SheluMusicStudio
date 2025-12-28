@@ -1,5 +1,5 @@
 """
-API REST para SheluMusicStudio
+API REST para Shelu Music Studio
 """
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +19,7 @@ from src.separation_service import separate_audio_task, get_separation_status
 from src.file_manager import organize_by_artist, list_songs, get_separated_files, get_music_tree, get_library_stats
 
 app = FastAPI(
-    title="SheluMusicStudio API",
+    title="Shelu Music Studio API",
     description="API para descarga y separación de audio de YouTube",
     version="1.0.0"
 )

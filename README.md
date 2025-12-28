@@ -1,4 +1,4 @@
-# 🎵 SheluMusicStudio
+# 🎵 Shelu Music Studio
 
 **Aplicación web para descargar audio de YouTube y separarlo en pistas individuales con IA**
 

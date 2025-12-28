@@ -15,7 +15,7 @@ from src.separate_audio import separate_audio
 
 def main():
     print("=" * 60)
-    print("  SheluMusicStudio - Descarga y Separación de Audio")
+    print("  Shelu Music Studio - Descarga y Separación de Audio")
     print("=" * 60)
     print()
     

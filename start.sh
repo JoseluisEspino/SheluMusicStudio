@@ -1,7 +1,7 @@
 #!/bin/bash
-# Script de inicio para SheluMusicStudio (Linux/Mac)
+# Script de inicio para Shelu Music Studio (Linux/Mac)
 
-echo "🎵 Iniciando SheluMusicStudio..."
+echo "🎵 Iniciando Shelu Music Studio..."
 
 # Verificar entorno virtual
 if [ ! -f "venv/bin/activate" ]; then

@@ -1,4 +1,4 @@
-# 🚀 Guía de Desarrollo - SheluMusicStudio
+# 🚀 Guía de Desarrollo - Shelu Music Studio
 
 ## Inicio Rápido
 
