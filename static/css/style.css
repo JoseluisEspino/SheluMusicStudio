@@ -94,44 +94,18 @@ header h1 {
     border-radius: 12px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
-    overflow: hidden;
-}
-
-.tab::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-radius: 12px;
-}
-
-.tab span {
-    position: relative;
-    z-index: 1;
 }
 
 .tab:hover {
     color: var(--text-color);
     transform: translateY(-2px);
-}
-
-.tab:hover::before {
-    opacity: 0.1;
+    background: rgba(99, 102, 241, 0.1);
 }
 
 .tab.active {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
     color: white;
     box-shadow: var(--shadow-glow);
-}
-
-.tab.active::before {
-    opacity: 1;
 }
 
 /* Tab Content */
