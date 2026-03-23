@@ -60,20 +60,42 @@
                     <div class="player-section">
                         <div class="player-header">
                             <h3>Reproductor</h3>
-                            <div class="player-controls-main">
-                                <button id="playSelectedBtn" class="btn btn-primary" disabled>
-                                    ▶️ Reproducir Seleccionadas
-                                </button>
-                                <button id="clearQueueBtn" class="btn btn-secondary">
-                                    🗑️ Limpiar Cola
-                                </button>
-                            </div>
                         </div>
                         
                         <div class="now-playing" id="nowPlaying">
                             <div class="np-info">
                                 <span class="np-label">Reproduciendo:</span>
                                 <span class="np-title" id="npTitle">Ninguna pista</span>
+                            </div>
+                            
+                            <!-- Barra de progreso -->
+                            <div class="playback-progress">
+                                <span class="time-current" id="timeDisplay">0:00</span>
+                                <input type="range" id="progressBar" class="progress-slider" min="0" max="100" value="0">
+                                <span class="time-total" id="durationDisplay">0:00</span>
+                            </div>
+                            
+                            <!-- Controles de reproducción -->
+                            <div class="player-controls">
+                                <button id="restartBtn" class="control-btn" title="Reiniciar">
+                                    🔄
+                                </button>
+                                <button id="playPauseBtn" class="control-btn control-btn-main" title="Reproducir/Pausar">
+                                    ▶️
+                                </button>
+                                <button id="stopBtn" class="control-btn" title="Detener">
+                                    ⏹️
+                                </button>
+                            </div>
+                            
+                            <!-- Botones de gestión -->
+                            <div class="player-controls-main">
+                                <button id="playSelectedBtn" class="btn btn-primary">
+                                    ▶️ Reproducir
+                                </button>
+                                <button id="clearQueueBtn" class="btn btn-secondary">
+                                    🗑️ Limpiar
+                                </button>
                             </div>
                         </div>
                         

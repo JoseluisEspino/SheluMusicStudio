@@ -457,12 +457,28 @@ function escapeHtml(text) {
 
 // === EXPLORADOR Y REPRODUCTOR ===
 function initExplorer() {
-    // Event listeners para controles
-    document.getElementById('playSelectedBtn').addEventListener('click', playSelected);
-    document.getElementById('clearQueueBtn').addEventListener('click', clearQueue);
-    document.getElementById('refreshExplorerBtn').addEventListener('click', () => {
-        loadMusicTree();
-    });
+    // Event listeners para controles - verificar que existan
+    const playSelectedBtn = document.getElementById('playSelectedBtn');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const clearQueueBtn = document.getElementById('clearQueueBtn');
+    const refreshExplorerBtn = document.getElementById('refreshExplorerBtn');
+    const progressBar = document.getElementById('progressBar');
+    
+    if (playSelectedBtn) playSelectedBtn.addEventListener('click', playSelected);
+    if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
+    if (restartBtn) restartBtn.addEventListener('click', restartPlayback);
+    if (stopBtn) stopBtn.addEventListener('click', stopPlayback);
+    if (clearQueueBtn) clearQueueBtn.addEventListener('click', clearQueue);
+    if (refreshExplorerBtn) {
+        refreshExplorerBtn.addEventListener('click', () => {
+            loadMusicTree();
+        });
+    }
+    
+    // Event listener para la barra de progreso
+    if (progressBar) progressBar.addEventListener('input', seekToPosition);
 }
 
 async function loadMusicTree() {
@@ -623,7 +639,13 @@ function updateSelectedList() {
     const playBtn = document.getElementById('playSelectedBtn');
     
     count.textContent = selectedTracks.length;
-    playBtn.disabled = selectedTracks.length === 0;
+    // Siempre habilitar el botón
+    if (playBtn) playBtn.disabled = false;
+    
+    console.log('updateSelectedList: selectedTracks.length =', selectedTracks.length);
+    
+    // Actualizar también los controles circulares
+    updatePlayerUI();
     
     if (selectedTracks.length === 0) {
         container.innerHTML = '<p class="empty-queue">No hay pistas seleccionadas</p>';
@@ -646,8 +668,35 @@ function removeFromSelected(trackId) {
     updateSelectedList();
 }
 
+let isPlaying = false;
+
 function playSelected() {
-    if (selectedTracks.length === 0) return;
+    if (selectedTracks.length === 0) {
+        console.log('No hay pistas seleccionadas');
+        return;
+    }
+    
+    console.log('=== Iniciando reproducción desde playSelected ===');
+    startPlayback();
+}
+
+function startPlayback() {
+    console.log('=== startPlayback ===');
+    
+    // Si ya hay reproducción, solo reanudar
+    if (audioPlayers.length > 0 && !isPlaying) {
+        console.log('Reanudando reproducción existente');
+        audioPlayers.forEach(audio => audio.play());
+        isPlaying = true;
+        updatePlayerUI();
+        return;
+    }
+    
+    // Si no hay pistas seleccionadas, no hacer nada
+    if (selectedTracks.length === 0) {
+        console.log('No hay pistas para reproducir');
+        return;
+    }
     
     // Detener reproducción anterior
     stopAllAudio();
@@ -660,30 +709,218 @@ function playSelected() {
         const audio = new Audio(`/${track.filePath}`);
         audio.volume = 1.0;
         
+        console.log(`Creando reproductor ${index + 1}/${playQueue.length}: ${track.displayName}`);
+        
         audio.addEventListener('error', (e) => {
             console.error(`Error al cargar ${track.displayName}:`, e);
         });
         
+        // Evento cuando termina la reproducción
+        audio.addEventListener('ended', () => {
+            if (index === 0) { // Usar el primer audio como referencia
+                console.log('Reproducción terminada');
+                stopPlayback();
+            }
+        });
+        
+        // Evento cuando los metadatos están cargados (incluida la duración)
+        if (index === 0) {
+            audio.addEventListener('loadedmetadata', () => {
+                console.log('Metadata cargada, duración:', audio.duration, 'segundos');
+                updateProgress();
+            });
+            
+            // Actualizar progreso durante la reproducción
+            audio.addEventListener('timeupdate', () => {
+                updateProgress();
+            });
+        }
+        
         return audio;
     });
     
-    // Reproducir todas las pistas simultáneamente
-    document.getElementById('npTitle').textContent = `${playQueue.length} pistas reproduciéndose`;
+    console.log('audioPlayers creados:', audioPlayers.length);
     
-    audioPlayers.forEach(audio => {
-        audio.play().catch(error => {
-            console.error('Error al reproducir:', error);
+    // Actualizar UI
+    const npTitle = document.getElementById('npTitle');
+    if (npTitle) {
+        npTitle.textContent = `${playQueue.length} pista${playQueue.length > 1 ? 's' : ''}`;
+    }
+    
+    // Reproducir todas las pistas simultáneamente
+    console.log(`Reproduciendo ${audioPlayers.length} pistas...`);
+    audioPlayers.forEach((audio, idx) => {
+        audio.play().then(() => {
+            console.log(`Audio ${idx + 1} reproduciendo`);
+        }).catch(error => {
+            console.error(`Error al reproducir audio ${idx + 1}:`, error);
         });
     });
+    
+    isPlaying = true;
+    console.log('isPlaying =', isPlaying, 'audioPlayers.length =', audioPlayers.length);
+    updatePlayerUI();
+}
+
+function togglePlayPause() {
+    console.log('=== togglePlayPause ===');
+    console.log('audioPlayers.length:', audioPlayers.length, 'isPlaying:', isPlaying);
+    
+    // Si no hay reproductores, iniciar reproducción
+    if (audioPlayers.length === 0) {
+        console.log('No hay reproductores, iniciando reproducción...');
+        startPlayback();
+        return;
+    }
+    
+    if (isPlaying) {
+        // Pausar
+        console.log('Pausando reproducción');
+        audioPlayers.forEach(audio => audio.pause());
+        isPlaying = false;
+    } else {
+        // Reanudar
+        console.log('Reanudando reproducción');
+        audioPlayers.forEach(audio => {
+            audio.play().catch(error => {
+                console.error('Error al reanudar:', error);
+            });
+        });
+        isPlaying = true;
+    }
+    
+    updatePlayerUI();
+}
+
+function restartPlayback() {
+    if (audioPlayers.length === 0) return;
+    
+    audioPlayers.forEach(audio => {
+        audio.currentTime = 0;
+        audio.play().catch(error => {
+            console.error('Error al reiniciar:', error);
+        });
+    });
+    
+    isPlaying = true;
+    updatePlayerUI();
+}
+
+function stopPlayback() {
+    audioPlayers.forEach(audio => {
+        audio.pause();
+        audio.currentTime = 0;
+    });
+    
+    isPlaying = false;
+    updatePlayerUI();
+    updateProgress();
 }
 
 function clearQueue() {
     stopAllAudio();
     playQueue = [];
     audioPlayers = [];
+    isPlaying = false;
     
-    document.getElementById('npTitle').textContent = 'Ninguna pista';
+    const npTitle = document.getElementById('npTitle');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const durationDisplay = document.getElementById('durationDisplay');
+    const progressBar = document.getElementById('progressBar');
+    
+    if (npTitle) npTitle.textContent = 'Ninguna pista';
+    if (timeDisplay) timeDisplay.textContent = '0:00';
+    if (durationDisplay) durationDisplay.textContent = '0:00';
+    if (progressBar) progressBar.value = 0;
+    
     updateQueueList();
+    updatePlayerUI();
+}
+
+function updatePlayerUI() {
+    const hasQueue = audioPlayers.length > 0;
+    const hasSelected = selectedTracks.length > 0;
+    
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressBar = document.getElementById('progressBar');
+    const restartBtn = document.getElementById('restartBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    
+    console.log('=== updatePlayerUI ===');
+    console.log('audioPlayers.length:', audioPlayers.length);
+    console.log('selectedTracks.length:', selectedTracks.length);
+    console.log('hasQueue:', hasQueue, 'hasSelected:', hasSelected);
+    console.log('isPlaying:', isPlaying);
+    
+    if (!playPauseBtn || !progressBar || !restartBtn || !stopBtn) {
+        console.warn('Elementos del reproductor no encontrados');
+        return;
+    }
+    
+    // Actualizar botón play/pause - SIEMPRE HABILITADO
+    playPauseBtn.textContent = isPlaying ? '⏸️' : '▶️';
+    playPauseBtn.title = isPlaying ? 'Pausar' : (hasQueue ? 'Reanudar' : 'Reproducir');
+    playPauseBtn.disabled = false; // SIEMPRE HABILITADO
+    
+    // Actualizar otros controles - SIEMPRE HABILITADOS
+    restartBtn.disabled = false;
+    stopBtn.disabled = false;
+    progressBar.disabled = false;
+    
+    console.log('Todos los botones habilitados');
+}
+
+function updateProgress() {
+    if (audioPlayers.length === 0) {
+        console.log('updateProgress: No hay reproductores');
+        return;
+    }
+    
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const durationDisplay = document.getElementById('durationDisplay');
+    
+    if (!progressBar || !timeDisplay || !durationDisplay) {
+        console.warn('Elementos de progreso no encontrados');
+        return;
+    }
+    
+    const audio = audioPlayers[0]; // Usar el primer audio como referencia
+    const currentTime = audio.currentTime;
+    const duration = audio.duration;
+    
+    if (!isNaN(duration) && duration > 0) {
+        const progress = (currentTime / duration) * 100;
+        progressBar.value = progress;
+        timeDisplay.textContent = formatTime(currentTime);
+        durationDisplay.textContent = formatTime(duration);
+    } else {
+        console.log('Duración aún no disponible');
+    }
+}
+
+function seekToPosition(e) {
+    if (audioPlayers.length === 0) return;
+    
+    const audio = audioPlayers[0];
+    const duration = audio.duration;
+    
+    if (!isNaN(duration) && duration > 0) {
+        const seekTime = (e.target.value / 100) * duration;
+        
+        // Sincronizar todos los reproductores
+        audioPlayers.forEach(player => {
+            player.currentTime = seekTime;
+        });
+    }
+}
+
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function stopAllAudio() {
@@ -730,7 +967,8 @@ function removeFromQueue(index, event) {
     }
     
     updateQueueList();
-    document.getElementById('npTitle').textContent = `${playQueue.length} pistas reproduciéndose`;
+    document.getElementById('npTitle').textContent = `${playQueue.length} pistas`;
+    updatePlayerUI();
 }
 
 // === SEPARACIÓN DESDE EXPLORADOR ===

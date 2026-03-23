@@ -92,7 +92,21 @@ def download_audio(
         # Buscar FFmpeg
         ffmpeg_location = find_ffmpeg()
         
-        # Configurar opciones de descarga
+        # Buscar Deno en ubicaciones comunes de Windows
+        deno_paths = [
+            os.path.expandvars(r'%USERPROFILE%\.deno\bin\deno.exe'),
+            os.path.expandvars(r'%LOCALAPPDATA%\deno\bin\deno.exe'),
+            r'C:\Program Files\deno\deno.exe',
+            # Ruta de instalación de WinGet
+            os.path.expandvars(r'%LOCALAPPDATA%\Microsoft\WinGet\Packages\DenoLand.Deno_Microsoft.Winget.Source_8wekyb3d8bbwe\deno.exe'),
+        ]
+        deno_location = None
+        for deno_path in deno_paths:
+            if os.path.exists(deno_path):
+                deno_location = deno_path
+                break
+        
+        # Configurar opciones de descarga mejoradas
         ydl_opts = {
             'format': 'bestaudio/best',
             'postprocessors': [{
@@ -103,7 +117,30 @@ def download_audio(
             'outtmpl': os.path.join(output_path, f'{safe_title}.%(ext)s'),
             'quiet': False,
             'no_warnings': False,
+            # Opciones para evitar errores 403
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                    'player_skip': ['webpage', 'configs'],
+                }
+            },
+            # Headers y opciones de seguridad
+            'nocheckcertificate': True,
+            'allow_unplayable_formats': False,
         }
+        
+        # Agregar runtime de JavaScript si está disponible
+        if deno_location:
+            # Configurar el runtime de JavaScript para el extractor de YouTube
+            if 'extractor_args' not in ydl_opts:
+                ydl_opts['extractor_args'] = {}
+            if 'youtube' not in ydl_opts['extractor_args']:
+                ydl_opts['extractor_args']['youtube'] = {}
+            
+            # Usar la opción correcta para el runtime
+            ydl_opts['extractor_args']['youtube']['js_runtimes'] = f'deno:{deno_location}'
+            print(f"✓ Deno encontrado en: {deno_location}")
         
         if ffmpeg_location:
             ydl_opts['ffmpeg_location'] = ffmpeg_location
